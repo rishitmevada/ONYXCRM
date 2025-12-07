@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+    html { scroll-behavior: smooth; }
+    body { background-color: #f8fafc; }
+
+    /* Hide scrollbar */
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Print Styles */
+    @media print {
+      @page { margin: 0; }
+      body { margin: 1.6cm; }
+      .print\:hidden { display: none !important; }
+      .print\:p-0 { padding: 0 !important; }
+      .print\:shadow-none { box-shadow: none !important; }
+      .print\:break-before-page { page-break-before: always; }
+    }
