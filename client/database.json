@@ -1,0 +1,81 @@
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const path = require('path');
+const fs = require('fs').promises;
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const DB_FILE = path.join(__dirname, 'database.json');
+
+// Middleware
+app.use(cors());
+// Increase limit to 10mb to handle base64 images of products
+app.use(bodyParser.json({ limit: '10mb' })); 
+
+// 1. Serve Static Files (The React App)
+// This looks for a folder named "public" where you uploaded your 'dist' files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// --- Helper Functions to Read/Write Data ---
+async function readDB() {
+    try {
+        const data = await fs.readFile(DB_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        // If database.json doesn't exist, return default empty structure
+        return { 
+            users: [
+                { id: 1, username: 'admin', password: '123', role: 'admin', name: 'Administrator' }
+            ],
+            products: [], 
+            customers: [], 
+            quotes: [], 
+            categories: [
+                'WET PROCESS MACHINES', 'DRY PROCESS MACHINES', 'AUXILIARY MACHINES', 
+                'Hydraulic', 'CNC', 'Logistics', 'Parts'
+            ],
+            exchangeRates: { USD: 84.00, EUR: 90.00, GBP: 105.00, AED: 22.80 }
+        };
+    }
+}
+
+async function writeDB(data) {
+    await fs.writeFile(DB_FILE, JSON.stringify(data, null, 2));
+}
+
+// --- API Routes (For Data Saving) ---
+
+// GET: Fetch all data on startup
+app.get('/api/data', async (req, res) => {
+    const data = await readDB();
+    res.json(data);
+});
+
+// POST: Save specific data (e.g., just quotes, or just customers)
+app.post('/api/save', async (req, res) => {
+    const { key, data } = req.body; 
+    // key expects: 'products' | 'customers' | 'quotes' | 'users' | 'exchangeRates'
+    
+    if (!key) return res.status(400).json({ error: "Missing data key" });
+
+    try {
+        const currentDB = await readDB();
+        currentDB[key] = data; // Update only the section sent from frontend
+        await writeDB(currentDB);
+        res.json({ success: true, message: `${key} updated successfully` });
+    } catch (err) {
+        console.error("Save Error:", err);
+        res.status(500).json({ error: "Failed to save data" });
+    }
+});
+
+// 2. Handle React Routing (Redirect all unknown routes to index.html)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Start Server
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
